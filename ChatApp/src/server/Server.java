@@ -9,7 +9,6 @@ public class Server {
     private static ArrayList<ClientHandler> clients = new ArrayList<>();
 
     public static void main(String[] args) {
-
         try {
             ServerSocket serverSocket = new ServerSocket(5000);
 
