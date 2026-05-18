@@ -7,10 +7,23 @@ import java.util.Scanner;
 public class Client {
 
     public static void main(String[] args) {
+        String host = args.length > 0 ? args[0] : "localhost";
+        int port = 5000;
+
+        if (args.length > 1) {
+            try {
+                port = Integer.parseInt(args[1]);
+            } catch (NumberFormatException e) {
+                System.out.println("Invalid port. Usage: java client.Client [host] [port]");
+                return;
+            }
+        }
 
         try {
 
-            Socket socket = new Socket("localhost", 5000);
+            Socket socket = new Socket(host, port);
+
+            System.out.println("Connected to " + host + ":" + port);
 
             BufferedReader in =
                     new BufferedReader(

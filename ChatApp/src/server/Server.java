@@ -9,10 +9,21 @@ public class Server {
     private static ArrayList<ClientHandler> clients = new ArrayList<>();
 
     public static void main(String[] args) {
-        try {
-            ServerSocket serverSocket = new ServerSocket(5000);
+        int port = 5000;
 
-            System.out.println("Server started...");
+        if (args.length > 0) {
+            try {
+                port = Integer.parseInt(args[0]);
+            } catch (NumberFormatException e) {
+                System.out.println("Invalid port. Usage: java server.Server [port]");
+                return;
+            }
+        }
+
+        try {
+            ServerSocket serverSocket = new ServerSocket(port);
+
+            System.out.println("Server started on port " + port + "...");
 
             while (true) {
 
