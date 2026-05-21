@@ -1,13 +1,48 @@
-# FluxChat
+# FluxChat Opportunities
 
-FluxChat is a small Java chat application built with sockets. It has a server
-that accepts multiple clients and broadcasts each message to everyone connected.
+FluxChat is being reshaped from a basic chat app into a lightweight career
+network for job opportunities. The app still uses Java sockets, but the server
+now supports professional profiles, job posts, job listings, applications, and
+public networking messages.
 
-The project currently includes:
+## Current Features
 
-- A console chat client that can send and receive messages
-- A socket server that listens for incoming clients
-- A basic Swing GUI window, which is not connected to the chat server yet
+- Console client for networking messages and opportunity commands
+- Swing desktop client connected to the server
+- Multi-client socket server
+- User display names
+- In-memory user directory
+- In-memory job posts
+- In-memory application messages
+- Public announcements when people join, leave, add users, update profiles, post jobs, or apply
+
+## Commands
+
+After connecting, use these commands from the console client or Swing message
+box:
+
+```text
+/profile Role | skills | location
+/adduser Name | role | skills | location
+/users
+/post Job title | company | location | description
+/jobs
+/apply JobId Short application message
+/help
+```
+
+Any other text is sent as a public networking message.
+
+Example flow:
+
+```text
+/profile Junior Java Developer | Java, SQL, Swing | Johannesburg
+/adduser Thabo | Recruiter | Hiring, interviews | Cape Town
+/users
+/post Support Engineer | Acme | Remote | Help customers troubleshoot accounts
+/jobs
+/apply 1 I have Java support experience and can start immediately.
+```
 
 ## Project Structure
 
@@ -15,11 +50,11 @@ The project currently includes:
 ChatApp/
   src/
     client/
-      Client.java       # Console client
-      ChatGUI.java      # Basic Swing window
+      Client.java        # Console client
+      ChatGUI.java       # Swing desktop opportunity client
     server/
-      Server.java       # Starts the chat server
-      ClientHandler.java # Handles one connected client
+      Server.java        # Starts the opportunity server
+      ClientHandler.java # Handles users, commands, jobs, and applications
 ```
 
 ## Requirements
@@ -40,8 +75,6 @@ cd /home/wtc27/IdeaProjects/fluxchat
 javac -d /tmp/fluxchat-classes ChatApp/src/server/*.java ChatApp/src/client/*.java
 ```
 
-This compiles the app into `/tmp/fluxchat-classes`.
-
 ## Run Locally
 
 Open one terminal and start the server:
@@ -50,20 +83,17 @@ Open one terminal and start the server:
 java -cp /tmp/fluxchat-classes server.Server
 ```
 
-Open another terminal and start a client:
+Open another terminal and start the console client:
 
 ```bash
 java -cp /tmp/fluxchat-classes client.Client
 ```
 
-Open a third terminal and start another client:
+Or start the Swing desktop client:
 
 ```bash
-java -cp /tmp/fluxchat-classes client.Client
+java -cp /tmp/fluxchat-classes client.ChatGUI
 ```
-
-Now type a message in either client and press Enter. The message should appear
-in both client terminals.
 
 ## Run Over a Real Network
 
@@ -93,51 +123,31 @@ java -cp /tmp/fluxchat-classes client.Client 192.168.x.x 5000
 Replace `192.168.x.x` with the real IP address of the server computer.
 
 If the connection fails, the firewall may be blocking the port. On Linux with
-UFW, allow the chat port with:
+UFW, allow the app port with:
 
 ```bash
 sudo ufw allow 5000/tcp
 ```
 
-## Stop the Server
-
-In the terminal where the server is running, press:
-
-```bash
-Ctrl + C
-```
-
-If you lost the terminal, find the Java process:
-
-```bash
-jps
-```
-
-Then stop the server process:
-
-```bash
-kill <pid>
-```
-
 ## Current Limitations
 
-This is an early learning project, so it keeps things simple:
+This is still an early MVP:
 
-- No usernames yet
-- No message history
-- No private messages
-- No encryption
-- No login system
-- The GUI is only a window for now and is not wired to the server
-- The server broadcasts messages to all connected clients
+- No database yet, so jobs disappear when the server stops
+- User profiles are still in memory only
+- No login system or identity verification
+- No private recruiter-to-candidate messages
+- No saved resumes, CV uploads, or company pages
+- No search or filters yet
+- No moderation tools yet
 
-## Next Ideas
+## Next Product Steps
 
 Good next improvements would be:
 
-- Ask each user for a name before joining
-- Show when users connect or disconnect
-- Connect the Swing GUI to the server
-- Add a cleaner shutdown for clients
-- Remove disconnected clients from the server list
-- Add timestamps to messages
+- Save users and jobs to a database or file
+- Add private messages between recruiters and candidates
+- Add job categories, locations, salary ranges, and filters
+- Add separate recruiter and job seeker roles
+- Add a cleaner profile format with experience, education, and links
+- Add moderation for spam and fake opportunities

@@ -36,8 +36,7 @@ public class Client {
 
             Scanner scanner = new Scanner(System.in);
 
-            // Thread for receiving messages
-            new Thread(() -> {
+            Thread receiver = new Thread(() -> {
 
                 String serverMessage;
 
@@ -49,18 +48,26 @@ public class Client {
                     }
 
                 } catch (IOException e) {
-                    e.printStackTrace();
+                    if (!socket.isClosed()) {
+                        System.out.println("Disconnected: " + e.getMessage());
+                    }
                 }
 
-            }).start();
+            });
+            receiver.setDaemon(true);
+            receiver.start();
 
-            // Sending messages
-            while (true) {
+            System.out.println("Type your name when asked by the server.");
+            System.out.println("Try /help, /profile, /users, /adduser, /post, /jobs, or /apply.");
+
+            while (scanner.hasNextLine()) {
 
                 String message = scanner.nextLine();
 
                 out.println(message);
             }
+
+            socket.close();
 
         } catch (IOException e) {
             e.printStackTrace();

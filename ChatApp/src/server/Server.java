@@ -2,11 +2,12 @@ package server;
 
 import java.io.*;
 import java.net.*;
-import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 public class Server {
 
-    private static ArrayList<ClientHandler> clients = new ArrayList<>();
+    private static final List<ClientHandler> clients = new CopyOnWriteArrayList<>();
 
     public static void main(String[] args) {
         int port = 5000;
