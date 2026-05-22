@@ -12,6 +12,7 @@ public class JobPost implements Serializable {
     private final String location;
     private final String description;
     private final String poster;
+    private final String sourceUrl;
     private final LocalDateTime createdAt;
 
     public JobPost(int id,
@@ -20,12 +21,23 @@ public class JobPost implements Serializable {
                    String location,
                    String description,
                    String poster) {
+        this(id, title, company, location, description, poster, "");
+    }
+
+    public JobPost(int id,
+                   String title,
+                   String company,
+                   String location,
+                   String description,
+                   String poster,
+                   String sourceUrl) {
         this.id = id;
         this.title = title;
         this.company = company;
         this.location = location;
         this.description = description;
         this.poster = poster;
+        this.sourceUrl = sourceUrl;
         this.createdAt = LocalDateTime.now();
     }
 
@@ -51,6 +63,10 @@ public class JobPost implements Serializable {
 
     public String getPoster() {
         return poster;
+    }
+
+    public String getSourceUrl() {
+        return sourceUrl == null ? "" : sourceUrl;
     }
 
     public LocalDateTime getCreatedAt() {

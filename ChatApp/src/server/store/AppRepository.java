@@ -15,6 +15,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 public class AppRepository {
     private final Path dataFile;
@@ -39,6 +41,20 @@ public class AppRepository {
         return Optional.ofNullable(users.get(normalizeName(name)));
     }
 
+    public synchronized Optional<UserProfile> findUserByIdNumber(String idNumber) {
+        String normalizedId = idNumber.trim();
+        return users.values().stream()
+                .filter(user -> normalizedId.equals(user.getIdNumber()))
+                .findFirst();
+    }
+
+    public synchronized boolean idNumberBelongsToAnotherUser(String idNumber, String name) {
+        String normalizedName = normalizeName(name);
+        return findUserByIdNumber(idNumber)
+                .map(user -> !normalizeName(user.getName()).equals(normalizedName))
+                .orElse(false);
+    }
+
     public synchronized void saveUser(UserProfile user) {
         users.put(normalizeName(user.getName()), user);
         save();
@@ -55,7 +71,16 @@ public class AppRepository {
                                           String location,
                                           String description,
                                           String poster) {
-        JobPost job = new JobPost(nextJobId++, title, company, location, description, poster);
+        return createJob(title, company, location, description, poster, "");
+    }
+
+    public synchronized JobPost createJob(String title,
+                                          String company,
+                                          String location,
+                                          String description,
+                                          String poster,
+                                          String sourceUrl) {
+        JobPost job = new JobPost(nextJobId++, title, company, location, description, poster, sourceUrl);
         jobs.add(job);
         save();
         return job;
@@ -67,6 +92,14 @@ public class AppRepository {
 
     public synchronized Optional<JobPost> findJob(int jobId) {
         return jobs.stream().filter(job -> job.getId() == jobId).findFirst();
+    }
+
+    public synchronized List<JobMatch> matchingJobsFor(UserProfile user) {
+        return jobs.stream()
+                .map(job -> match(job, user))
+                .filter(match -> match.getScore() > 0)
+                .sorted(Comparator.comparingInt(JobMatch::getScore).reversed())
+                .toList();
     }
 
     public synchronized JobApplication createApplication(int jobId, String applicant, String message) {
@@ -141,5 +174,46 @@ public class AppRepository {
 
     private String normalizeName(String name) {
         return name.trim().replaceAll("\\s+", " ");
+    }
+
+    private JobMatch match(JobPost job, UserProfile user) {
+        int score = 0;
+        List<String> reasons = new ArrayList<>();
+        String searchableJobText = (job.getTitle() + " " + job.getDescription()).toLowerCase();
+
+        Set<String> skillTokens = tokens(user.getSkills());
+        long skillHits = skillTokens.stream()
+                .filter(searchableJobText::contains)
+                .count();
+        if (skillHits > 0) {
+            score += (int) skillHits * 20;
+            reasons.add(skillHits + " skill match" + (skillHits == 1 ? "" : "es"));
+        }
+
+        Set<String> roleTokens = tokens(user.getRole());
+        long roleHits = roleTokens.stream()
+                .filter(searchableJobText::contains)
+                .count();
+        if (roleHits > 0) {
+            score += (int) roleHits * 15;
+            reasons.add("role match");
+        }
+
+        String userLocation = user.getLocation().toLowerCase();
+        String jobLocation = job.getLocation().toLowerCase();
+        if (!userLocation.isBlank()
+                && (jobLocation.contains(userLocation) || jobLocation.contains("remote"))) {
+            score += 10;
+            reasons.add("location match");
+        }
+
+        return new JobMatch(job, score, String.join(", ", reasons));
+    }
+
+    private Set<String> tokens(String text) {
+        return List.of(text.toLowerCase().split("[^a-z0-9+#]+")).stream()
+                .map(String::trim)
+                .filter(token -> token.length() >= 2)
+                .collect(Collectors.toSet());
     }
 }

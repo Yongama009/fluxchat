@@ -2,8 +2,12 @@ package server;
 
 import server.store.AppRepository;
 import server.store.JobApplication;
+import server.store.JobMatch;
 import server.store.JobPost;
+import server.store.JobSafetyCheck;
 import server.store.PasswordHasher;
+import server.store.PasswordPolicy;
+import server.store.SaIdValidator;
 import server.store.UserProfile;
 
 import java.io.BufferedReader;
@@ -51,7 +55,9 @@ public class ClientHandler extends Thread {
         try {
             askForDisplayName();
             sendWelcome();
-            broadcastSystemMessage(displayName + " joined the opportunity network.");
+            if (authenticated) {
+                broadcastSystemMessage(displayName + " joined the opportunity network.");
+            }
 
             String message;
             while ((message = in.readLine()) != null) {
@@ -62,7 +68,9 @@ public class ClientHandler extends Thread {
         } finally {
             clients.remove(this);
             closeSocket();
-            broadcastSystemMessage(displayName + " left the opportunity network.");
+            if (authenticated) {
+                broadcastSystemMessage(displayName + " left the opportunity network.");
+            }
         }
     }
 
@@ -74,8 +82,8 @@ public class ClientHandler extends Thread {
             displayName = clean(name);
         }
 
-        UserProfile user = repository.getOrCreateUser(displayName);
-        authenticated = !user.hasPassword();
+        repository.findUser(displayName)
+                .ifPresent(user -> authenticated = !user.hasPassword());
     }
 
     private void sendWelcome() {
@@ -94,6 +102,10 @@ public class ClientHandler extends Thread {
 
         if (message.equalsIgnoreCase("/help")) {
             sendHelp();
+        } else if (message.toLowerCase().startsWith("/registercv ")) {
+            registerCv(message.substring("/registercv ".length()).trim());
+        } else if (message.toLowerCase().startsWith("/loginid ")) {
+            loginById(message.substring("/loginid ".length()).trim());
         } else if (message.toLowerCase().startsWith("/register ")) {
             register(message.substring("/register ".length()).trim());
         } else if (message.toLowerCase().startsWith("/login ")) {
@@ -106,6 +118,8 @@ public class ClientHandler extends Thread {
             sendUsers();
         } else if (message.equalsIgnoreCase("/jobs")) {
             sendJobs();
+        } else if (message.equalsIgnoreCase("/matches")) {
+            sendMatches();
         } else if (message.toLowerCase().startsWith("/post ")) {
             createJobPost(message.substring("/post ".length()).trim());
         } else if (message.toLowerCase().startsWith("/apply ")) {
@@ -118,8 +132,9 @@ public class ClientHandler extends Thread {
     }
 
     private void register(String password) {
-        if (password.length() < 6) {
-            out.println("Password must be at least 6 characters.");
+        String passwordError = PasswordPolicy.validate(password);
+        if (passwordError != null) {
+            out.println(passwordError);
             return;
         }
 
@@ -133,6 +148,57 @@ public class ClientHandler extends Thread {
         repository.saveUser(user);
         authenticated = true;
         out.println("Account registered for " + displayName + ".");
+    }
+
+    private void registerCv(String text) {
+        String[] parts = text.split("\\|", 11);
+        if (parts.length < 11) {
+            out.println("Usage: /registercv First name | Last name | ID number | email | phone | location | role | skills | education | experience | password");
+            return;
+        }
+
+        String firstName = clean(parts[0]);
+        String lastName = clean(parts[1]);
+        String idNumber = parts[2].trim();
+        String email = parts[3].trim().toLowerCase();
+        String phone = clean(parts[4]);
+        String location = clean(parts[5]);
+        String role = clean(parts[6]);
+        String skills = clean(parts[7]);
+        String education = clean(parts[8]);
+        String experience = clean(parts[9]);
+        String password = parts[10].trim();
+
+        String validationError = validateRegistration(firstName, lastName, idNumber, email,
+                phone, location, role, skills, education, experience, password);
+        if (validationError != null) {
+            out.println(validationError);
+            return;
+        }
+
+        String accountName = firstName + " " + lastName;
+        if (repository.idNumberBelongsToAnotherUser(idNumber, accountName)) {
+            out.println("That ID number is already registered.");
+            return;
+        }
+
+        UserProfile user = repository.getOrCreateUser(accountName);
+        if (user.hasPassword()) {
+            out.println("An account already exists for " + accountName + ". Use Login.");
+            return;
+        }
+
+        user.completeCvProfile(firstName, lastName, idNumber, email, phone, location,
+                role, skills, education, experience);
+        user.setPasswordHash(PasswordHasher.hash(password));
+        repository.saveUser(user);
+
+        displayName = accountName;
+        authenticated = true;
+        out.println("Account registered and CV profile completed for " + displayName + ".");
+        out.println("Identity check: SA ID format, birth date, and checksum passed.");
+        sendMatchesFor(user);
+        broadcastSystemMessage(displayName + " joined with a completed CV profile.");
     }
 
     private void login(String password) {
@@ -149,6 +215,34 @@ public class ClientHandler extends Thread {
 
         authenticated = true;
         out.println("Logged in as " + displayName + ".");
+    }
+
+    private void loginById(String text) {
+        String[] parts = text.split("\\s+", 2);
+        if (parts.length < 2) {
+            out.println("Usage: /loginid IDNumber password");
+            return;
+        }
+
+        Optional<UserProfile> user = repository.findUserByIdNumber(parts[0].trim());
+        if (user.isEmpty() || !user.get().hasPassword()) {
+            out.println("No registered account found for that ID number.");
+            return;
+        }
+
+        if (!PasswordHasher.verify(parts[1].trim(), user.get().getPasswordHash())) {
+            out.println("Login failed.");
+            return;
+        }
+
+        displayName = user.get().getName();
+        authenticated = true;
+        out.println("Logged in as " + displayName + ".");
+        if (user.get().hasCompletedCvProfile()) {
+            out.println("CV profile is complete. You can apply for jobs.");
+            sendMatchesFor(user.get());
+        }
+        broadcastSystemMessage(displayName + " logged in.");
     }
 
     private void updateProfile(String profileText) {
@@ -197,7 +291,8 @@ public class ClientHandler extends Thread {
         out.println("Users:");
         for (UserProfile user : repository.users()) {
             out.println("- " + user.getName() + " | " + user.getRole()
-                    + " | " + user.getSkills() + " | " + user.getLocation());
+                    + " | " + user.getSkills() + " | " + user.getLocation()
+                    + " | CV " + (user.hasCompletedCvProfile() ? "complete" : "incomplete"));
         }
     }
 
@@ -206,10 +301,25 @@ public class ClientHandler extends Thread {
             return;
         }
 
-        String[] parts = text.split("\\|", 4);
+        String[] parts = text.split("\\|", 5);
 
         if (parts.length < 4) {
-            out.println("Usage: /post Job title | company | location | description");
+            out.println("Usage: /post Job title | company | location | description | optional source URL");
+            return;
+        }
+
+        String sourceUrl = parts.length > 4 ? clean(parts[4]) : "";
+        List<String> safetyProblems = JobSafetyCheck.validate(
+                clean(parts[0]),
+                clean(parts[1]),
+                clean(parts[3]),
+                sourceUrl
+        );
+        if (!safetyProblems.isEmpty()) {
+            out.println("Job rejected for safety review:");
+            for (String problem : safetyProblems) {
+                out.println("- " + problem);
+            }
             return;
         }
 
@@ -218,7 +328,8 @@ public class ClientHandler extends Thread {
                 clean(parts[1]),
                 clean(parts[2]),
                 clean(parts[3]),
-                displayName
+                displayName,
+                sourceUrl
         );
         broadcastMessage("[JOB #" + job.getId() + "] " + job.getTitle() + " at "
                 + job.getCompany() + " - " + job.getLocation() + " (posted by "
@@ -237,13 +348,56 @@ public class ClientHandler extends Thread {
             out.println("#" + job.getId() + " " + job.getTitle() + " at "
                     + job.getCompany() + " - " + job.getLocation());
             out.println("   " + job.getDescription());
+            if (!job.getSourceUrl().isBlank()) {
+                out.println("   Source: " + job.getSourceUrl());
+            }
             out.println("   Posted by " + job.getPoster() + ". Apply with /apply "
                     + job.getId() + " Your message");
         }
     }
 
+    private void sendMatches() {
+        if (!canChangeData()) {
+            return;
+        }
+
+        Optional<UserProfile> user = repository.findUser(displayName);
+        if (user.isEmpty() || !user.get().hasCompletedCvProfile()) {
+            out.println("Complete registration with a CV profile before viewing matches.");
+            return;
+        }
+
+        sendMatchesFor(user.get());
+    }
+
+    private void sendMatchesFor(UserProfile user) {
+        List<JobMatch> matches = repository.matchingJobsFor(user);
+        if (matches.isEmpty()) {
+            out.println("Matched opportunities: none yet. Use Jobs to view all available posts.");
+            return;
+        }
+
+        out.println("Matched opportunities for " + user.getRole() + ":");
+        for (JobMatch match : matches) {
+            JobPost job = match.getJob();
+            out.println("#" + job.getId() + " " + job.getTitle() + " at "
+                    + job.getCompany() + " - " + job.getLocation()
+                    + " [score " + match.getScore() + ": " + match.getReason() + "]");
+            out.println("   " + job.getDescription());
+            if (!job.getSourceUrl().isBlank()) {
+                out.println("   Source: " + job.getSourceUrl());
+            }
+        }
+    }
+
     private void applyForJob(String text) {
         if (!canChangeData()) {
+            return;
+        }
+
+        Optional<UserProfile> applicant = repository.findUser(displayName);
+        if (applicant.isEmpty() || !applicant.get().hasCompletedCvProfile()) {
+            out.println("Complete registration with a validated CV profile before applying.");
             return;
         }
 
@@ -268,7 +422,8 @@ public class ClientHandler extends Thread {
             return;
         }
 
-        JobApplication application = repository.createApplication(jobId, displayName, parts[1]);
+        JobApplication application = repository.createApplication(jobId, displayName,
+                parts[1] + " | CV: " + applicant.get().cvSummary());
         broadcastMessage("[APPLICATION #" + application.getId() + "] " + displayName + " applied for #"
                 + job.get().getId() + " " + job.get().getTitle() + " at " + job.get().getCompany()
                 + ": " + parts[1]);
@@ -298,6 +453,8 @@ public class ClientHandler extends Thread {
 
     private void sendHelp() {
         out.println("Commands:");
+        out.println("/registercv First name | Last name | ID number | email | phone | location | role | skills | education | experience | password");
+        out.println("/loginid IDNumber password");
         out.println("/register password");
         out.println("/login password");
         out.println("/profile Role | skills | location");
@@ -305,6 +462,7 @@ public class ClientHandler extends Thread {
         out.println("/users");
         out.println("/post Job title | company | location | description");
         out.println("/jobs");
+        out.println("/matches");
         out.println("/apply JobId Short application message");
         out.println("/applications JobId");
         out.println("/help");
@@ -343,7 +501,51 @@ public class ClientHandler extends Thread {
             return true;
         }
 
-        out.println("Please log in first with /login password.");
+        out.println("Please log in first with /loginid IDNumber password.");
         return false;
+    }
+
+    private String validateRegistration(String firstName,
+                                        String lastName,
+                                        String idNumber,
+                                        String email,
+                                        String phone,
+                                        String location,
+                                        String role,
+                                        String skills,
+                                        String education,
+                                        String experience,
+                                        String password) {
+        if (!isValidName(firstName) || !isValidName(lastName)) {
+            return "First name and last name must contain letters only and be at least 2 characters.";
+        }
+
+        if (!SaIdValidator.isValid(idNumber)) {
+            return "ID number is not valid. Use a 13-digit South African ID with a valid date and checksum.";
+        }
+
+        if (!email.matches("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$")) {
+            return "Email address is not valid.";
+        }
+
+        if (!phone.matches("^[+0-9][0-9\\s-]{8,18}$")) {
+            return "Phone number is not valid.";
+        }
+
+        if (location.isBlank() || role.isBlank() || skills.isBlank()
+                || education.isBlank() || experience.isBlank()) {
+            return "Location, role, skills, education, and experience are required.";
+        }
+
+        String passwordError = PasswordPolicy.validate(password);
+        if (passwordError != null) {
+            return passwordError;
+        }
+
+        return null;
+    }
+
+    private boolean isValidName(String value) {
+        return value.matches("[A-Za-z][A-Za-z '-]{1,49}");
     }
 }
