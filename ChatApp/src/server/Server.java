@@ -1,7 +1,11 @@
 package server;
 
-import java.io.*;
-import java.net.*;
+import server.store.AppRepository;
+
+import java.io.IOException;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
@@ -11,6 +15,7 @@ public class Server {
 
     public static void main(String[] args) {
         int port = 5000;
+        Path dataFile = Path.of("ChatApp", "data", "fluxchat.db");
 
         if (args.length > 0) {
             try {
@@ -21,10 +26,17 @@ public class Server {
             }
         }
 
+        if (args.length > 1) {
+            dataFile = Path.of(args[1]);
+        }
+
+        AppRepository repository = new AppRepository(dataFile);
+
         try {
             ServerSocket serverSocket = new ServerSocket(port);
 
             System.out.println("Server started on port " + port + "...");
+            System.out.println("Data file: " + dataFile.toAbsolutePath());
 
             while (true) {
 
@@ -33,7 +45,7 @@ public class Server {
                 System.out.println("New client connected");
 
                 ClientHandler clientThread =
-                        new ClientHandler(socket, clients);
+                        new ClientHandler(socket, clients, repository);
 
                 clients.add(clientThread);
 

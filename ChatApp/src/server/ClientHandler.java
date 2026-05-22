@@ -1,5 +1,11 @@
 package server;
 
+import server.store.AppRepository;
+import server.store.JobApplication;
+import server.store.JobPost;
+import server.store.PasswordHasher;
+import server.store.UserProfile;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -7,33 +13,26 @@ import java.io.PrintWriter;
 import java.net.Socket;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.Optional;
 
 public class ClientHandler extends Thread {
 
     private static final DateTimeFormatter TIME_FORMAT =
             DateTimeFormatter.ofPattern("HH:mm");
-    private static final AtomicInteger NEXT_JOB_ID = new AtomicInteger(1);
-    private static final List<JobPost> JOBS =
-            Collections.synchronizedList(new ArrayList<>());
-    private static final Map<String, UserProfile> USERS =
-            new ConcurrentHashMap<>();
 
     private final Socket socket;
     private final List<ClientHandler> clients;
+    private final AppRepository repository;
     private BufferedReader in;
     private PrintWriter out;
     private String displayName = "Guest";
-    private String profile = "No profile yet";
+    private boolean authenticated;
 
-    public ClientHandler(Socket socket, List<ClientHandler> clients) {
+    public ClientHandler(Socket socket, List<ClientHandler> clients, AppRepository repository) {
         this.socket = socket;
         this.clients = clients;
+        this.repository = repository;
 
         try {
             in = new BufferedReader(
@@ -72,15 +71,19 @@ public class ClientHandler extends Thread {
         String name = in.readLine();
 
         if (name != null && !name.trim().isEmpty()) {
-            displayName = name.trim();
+            displayName = clean(name);
         }
 
-        USERS.putIfAbsent(displayName, new UserProfile(displayName));
+        UserProfile user = repository.getOrCreateUser(displayName);
+        authenticated = !user.hasPassword();
     }
 
     private void sendWelcome() {
         out.println("Welcome, " + displayName + ".");
         out.println("FluxChat is now focused on job opportunities and career networking.");
+        repository.findUser(displayName)
+                .filter(UserProfile::hasPassword)
+                .ifPresent(user -> out.println("This name is registered. Use /login password before changing data."));
         sendHelp();
     }
 
@@ -91,6 +94,10 @@ public class ClientHandler extends Thread {
 
         if (message.equalsIgnoreCase("/help")) {
             sendHelp();
+        } else if (message.toLowerCase().startsWith("/register ")) {
+            register(message.substring("/register ".length()).trim());
+        } else if (message.toLowerCase().startsWith("/login ")) {
+            login(message.substring("/login ".length()).trim());
         } else if (message.toLowerCase().startsWith("/profile ")) {
             updateProfile(message.substring("/profile ".length()).trim());
         } else if (message.toLowerCase().startsWith("/adduser ")) {
@@ -103,26 +110,70 @@ public class ClientHandler extends Thread {
             createJobPost(message.substring("/post ".length()).trim());
         } else if (message.toLowerCase().startsWith("/apply ")) {
             applyForJob(message.substring("/apply ".length()).trim());
+        } else if (message.toLowerCase().startsWith("/applications ")) {
+            sendApplications(message.substring("/applications ".length()).trim());
         } else {
             broadcastMessage("[" + now() + "] " + displayName + ": " + message);
         }
     }
 
+    private void register(String password) {
+        if (password.length() < 6) {
+            out.println("Password must be at least 6 characters.");
+            return;
+        }
+
+        UserProfile user = repository.getOrCreateUser(displayName);
+        if (user.hasPassword()) {
+            out.println("This name is already registered. Use /login password.");
+            return;
+        }
+
+        user.setPasswordHash(PasswordHasher.hash(password));
+        repository.saveUser(user);
+        authenticated = true;
+        out.println("Account registered for " + displayName + ".");
+    }
+
+    private void login(String password) {
+        Optional<UserProfile> user = repository.findUser(displayName);
+        if (user.isEmpty() || !user.get().hasPassword()) {
+            out.println("This name is not registered yet. Use /register password.");
+            return;
+        }
+
+        if (!PasswordHasher.verify(password, user.get().getPasswordHash())) {
+            out.println("Login failed.");
+            return;
+        }
+
+        authenticated = true;
+        out.println("Logged in as " + displayName + ".");
+    }
+
     private void updateProfile(String profileText) {
+        if (!canChangeData()) {
+            return;
+        }
+
         if (profileText.isEmpty()) {
             out.println("Usage: /profile Role | skills | location");
             return;
         }
 
-        profile = profileText;
-        UserProfile user = USERS.computeIfAbsent(displayName, UserProfile::new);
+        UserProfile user = repository.getOrCreateUser(displayName);
         user.updateFromProfileText(profileText);
+        repository.saveUser(user);
 
-        out.println("Profile updated: " + profile);
-        broadcastSystemMessage(displayName + " updated their profile: " + profile);
+        out.println("Profile updated: " + profileText);
+        broadcastSystemMessage(displayName + " updated their profile: " + profileText);
     }
 
     private void addUser(String text) {
+        if (!canChangeData()) {
+            return;
+        }
+
         String[] parts = text.split("\\|", 4);
 
         if (parts.length < 4) {
@@ -131,29 +182,30 @@ public class ClientHandler extends Thread {
         }
 
         UserProfile user = new UserProfile(clean(parts[0]));
-        user.role = clean(parts[1]);
-        user.skills = clean(parts[2]);
-        user.location = clean(parts[3]);
-
-        USERS.put(user.name, user);
-        broadcastSystemMessage(displayName + " added user " + user.name
-                + " (" + user.role + ", " + user.location + ").");
+        user.update(clean(parts[1]), clean(parts[2]), clean(parts[3]));
+        repository.saveUser(user);
+        broadcastSystemMessage(displayName + " added user " + user.getName()
+                + " (" + user.getRole() + ", " + user.getLocation() + ").");
     }
 
     private void sendUsers() {
-        if (USERS.isEmpty()) {
+        if (repository.users().isEmpty()) {
             out.println("No users have been added yet.");
             return;
         }
 
         out.println("Users:");
-        for (UserProfile user : USERS.values()) {
-            out.println("- " + user.name + " | " + user.role
-                    + " | " + user.skills + " | " + user.location);
+        for (UserProfile user : repository.users()) {
+            out.println("- " + user.getName() + " | " + user.getRole()
+                    + " | " + user.getSkills() + " | " + user.getLocation());
         }
     }
 
     private void createJobPost(String text) {
+        if (!canChangeData()) {
+            return;
+        }
+
         String[] parts = text.split("\\|", 4);
 
         if (parts.length < 4) {
@@ -161,40 +213,40 @@ public class ClientHandler extends Thread {
             return;
         }
 
-        JobPost job = new JobPost(
-                NEXT_JOB_ID.getAndIncrement(),
+        JobPost job = repository.createJob(
                 clean(parts[0]),
                 clean(parts[1]),
                 clean(parts[2]),
                 clean(parts[3]),
                 displayName
         );
-
-        JOBS.add(job);
-        broadcastMessage("[JOB #" + job.id + "] " + job.title + " at "
-                + job.company + " - " + job.location + " (posted by "
-                + job.poster + ")");
+        broadcastMessage("[JOB #" + job.getId() + "] " + job.getTitle() + " at "
+                + job.getCompany() + " - " + job.getLocation() + " (posted by "
+                + job.getPoster() + ")");
     }
 
     private void sendJobs() {
-        synchronized (JOBS) {
-            if (JOBS.isEmpty()) {
-                out.println("No opportunities have been posted yet.");
-                return;
-            }
+        List<JobPost> jobs = repository.jobs();
+        if (jobs.isEmpty()) {
+            out.println("No opportunities have been posted yet.");
+            return;
+        }
 
-            out.println("Open opportunities:");
-            for (JobPost job : JOBS) {
-                out.println("#" + job.id + " " + job.title + " at "
-                        + job.company + " - " + job.location);
-                out.println("   " + job.description);
-                out.println("   Posted by " + job.poster + ". Apply with /apply "
-                        + job.id + " Your message");
-            }
+        out.println("Open opportunities:");
+        for (JobPost job : jobs) {
+            out.println("#" + job.getId() + " " + job.getTitle() + " at "
+                    + job.getCompany() + " - " + job.getLocation());
+            out.println("   " + job.getDescription());
+            out.println("   Posted by " + job.getPoster() + ". Apply with /apply "
+                    + job.getId() + " Your message");
         }
     }
 
     private void applyForJob(String text) {
+        if (!canChangeData()) {
+            return;
+        }
+
         String[] parts = text.split("\\s+", 2);
 
         if (parts.length < 2) {
@@ -210,37 +262,51 @@ public class ClientHandler extends Thread {
             return;
         }
 
-        JobPost job = findJob(jobId);
-        if (job == null) {
+        Optional<JobPost> job = repository.findJob(jobId);
+        if (job.isEmpty()) {
             out.println("No job found with id #" + jobId + ".");
             return;
         }
 
-        broadcastMessage("[APPLICATION] " + displayName + " applied for #"
-                + job.id + " " + job.title + " at " + job.company
+        JobApplication application = repository.createApplication(jobId, displayName, parts[1]);
+        broadcastMessage("[APPLICATION #" + application.getId() + "] " + displayName + " applied for #"
+                + job.get().getId() + " " + job.get().getTitle() + " at " + job.get().getCompany()
                 + ": " + parts[1]);
     }
 
-    private JobPost findJob(int jobId) {
-        synchronized (JOBS) {
-            for (JobPost job : JOBS) {
-                if (job.id == jobId) {
-                    return job;
-                }
-            }
+    private void sendApplications(String jobIdText) {
+        int jobId;
+        try {
+            jobId = Integer.parseInt(jobIdText.trim());
+        } catch (NumberFormatException e) {
+            out.println("Usage: /applications JobId");
+            return;
         }
 
-        return null;
+        List<JobApplication> applications = repository.applicationsForJob(jobId);
+        if (applications.isEmpty()) {
+            out.println("No applications found for job #" + jobId + ".");
+            return;
+        }
+
+        out.println("Applications for job #" + jobId + ":");
+        for (JobApplication application : applications) {
+            out.println("#" + application.getId() + " " + application.getApplicant()
+                    + ": " + application.getMessage());
+        }
     }
 
     private void sendHelp() {
         out.println("Commands:");
+        out.println("/register password");
+        out.println("/login password");
         out.println("/profile Role | skills | location");
         out.println("/adduser Name | role | skills | location");
         out.println("/users");
         out.println("/post Job title | company | location | description");
         out.println("/jobs");
         out.println("/apply JobId Short application message");
+        out.println("/applications JobId");
         out.println("/help");
         out.println("Send any other text as a public networking message.");
     }
@@ -272,53 +338,12 @@ public class ClientHandler extends Thread {
         return LocalDateTime.now().format(TIME_FORMAT);
     }
 
-    private static class JobPost {
-        private final int id;
-        private final String title;
-        private final String company;
-        private final String location;
-        private final String description;
-        private final String poster;
-
-        private JobPost(int id,
-                        String title,
-                        String company,
-                        String location,
-                        String description,
-                        String poster) {
-            this.id = id;
-            this.title = title;
-            this.company = company;
-            this.location = location;
-            this.description = description;
-            this.poster = poster;
-        }
-    }
-
-    private static class UserProfile {
-        private final String name;
-        private String role = "No role yet";
-        private String skills = "No skills yet";
-        private String location = "No location yet";
-
-        private UserProfile(String name) {
-            this.name = name;
+    private boolean canChangeData() {
+        if (authenticated) {
+            return true;
         }
 
-        private void updateFromProfileText(String profileText) {
-            String[] parts = profileText.split("\\|", 3);
-
-            if (parts.length > 0 && !parts[0].trim().isEmpty()) {
-                role = parts[0].trim();
-            }
-
-            if (parts.length > 1 && !parts[1].trim().isEmpty()) {
-                skills = parts[1].trim();
-            }
-
-            if (parts.length > 2 && !parts[2].trim().isEmpty()) {
-                location = parts[2].trim();
-            }
-        }
+        out.println("Please log in first with /login password.");
+        return false;
     }
 }
