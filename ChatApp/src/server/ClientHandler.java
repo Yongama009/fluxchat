@@ -32,6 +32,7 @@ public class ClientHandler extends Thread {
     private PrintWriter out;
     private String displayName = "Guest";
     private boolean authenticated;
+    private boolean passwordUpgradeRequired;
 
     public ClientHandler(Socket socket, List<ClientHandler> clients, AppRepository repository) {
         this.socket = socket;
@@ -106,6 +107,8 @@ public class ClientHandler extends Thread {
             registerCv(message.substring("/registercv ".length()).trim());
         } else if (message.toLowerCase().startsWith("/loginid ")) {
             loginById(message.substring("/loginid ".length()).trim());
+        } else if (message.toLowerCase().startsWith("/changepassword ")) {
+            changePassword(message.substring("/changepassword ".length()).trim());
         } else if (message.toLowerCase().startsWith("/register ")) {
             register(message.substring("/register ".length()).trim());
         } else if (message.toLowerCase().startsWith("/login ")) {
@@ -147,6 +150,7 @@ public class ClientHandler extends Thread {
         user.setPasswordHash(PasswordHasher.hash(password));
         repository.saveUser(user);
         authenticated = true;
+        passwordUpgradeRequired = false;
         out.println("Account registered for " + displayName + ".");
     }
 
@@ -195,6 +199,7 @@ public class ClientHandler extends Thread {
 
         displayName = accountName;
         authenticated = true;
+        passwordUpgradeRequired = false;
         out.println("Account registered and CV profile completed for " + displayName + ".");
         out.println("Identity check: SA ID format, birth date, and checksum passed.");
         sendMatchesFor(user);
@@ -214,7 +219,11 @@ public class ClientHandler extends Thread {
         }
 
         authenticated = true;
+        passwordUpgradeRequired = user.get().requiresPasswordUpgrade();
         out.println("Logged in as " + displayName + ".");
+        if (passwordUpgradeRequired) {
+            out.println("PASSWORD_UPGRADE_REQUIRED: Your password no longer meets the current security rules. Use /changepassword oldPassword newStrongPassword before continuing.");
+        }
     }
 
     private void loginById(String text) {
@@ -237,12 +246,50 @@ public class ClientHandler extends Thread {
 
         displayName = user.get().getName();
         authenticated = true;
+        passwordUpgradeRequired = user.get().requiresPasswordUpgrade();
         out.println("Logged in as " + displayName + ".");
+        if (passwordUpgradeRequired) {
+            out.println("PASSWORD_UPGRADE_REQUIRED: Your password no longer meets the current security rules. Use /changepassword oldPassword newStrongPassword before continuing.");
+            return;
+        }
         if (user.get().hasCompletedCvProfile()) {
             out.println("CV profile is complete. You can apply for jobs.");
             sendMatchesFor(user.get());
         }
         broadcastSystemMessage(displayName + " logged in.");
+    }
+
+    private void changePassword(String text) {
+        if (!authenticated) {
+            out.println("Please log in first.");
+            return;
+        }
+
+        String[] parts = text.split("\\s+", 2);
+        if (parts.length < 2) {
+            out.println("Usage: /changepassword oldPassword newStrongPassword");
+            return;
+        }
+
+        Optional<UserProfile> user = repository.findUser(displayName);
+        if (user.isEmpty() || !PasswordHasher.verify(parts[0], user.get().getPasswordHash())) {
+            out.println("Current password is incorrect.");
+            return;
+        }
+
+        String passwordError = PasswordPolicy.validate(parts[1].trim());
+        if (passwordError != null) {
+            out.println(passwordError);
+            return;
+        }
+
+        user.get().setPasswordHash(PasswordHasher.hash(parts[1].trim()));
+        repository.saveUser(user.get());
+        passwordUpgradeRequired = false;
+        out.println("Password updated. Account access restored.");
+        if (user.get().hasCompletedCvProfile()) {
+            sendMatchesFor(user.get());
+        }
     }
 
     private void updateProfile(String profileText) {
@@ -455,6 +502,7 @@ public class ClientHandler extends Thread {
         out.println("Commands:");
         out.println("/registercv First name | Last name | ID number | email | phone | location | role | skills | education | experience | password");
         out.println("/loginid IDNumber password");
+        out.println("/changepassword oldPassword newStrongPassword");
         out.println("/register password");
         out.println("/login password");
         out.println("/profile Role | skills | location");
@@ -498,6 +546,10 @@ public class ClientHandler extends Thread {
 
     private boolean canChangeData() {
         if (authenticated) {
+            if (passwordUpgradeRequired) {
+                out.println("Password update required before continuing. Use /changepassword oldPassword newStrongPassword.");
+                return false;
+            }
             return true;
         }
 

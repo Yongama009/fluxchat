@@ -18,6 +18,7 @@ public class UserProfile implements Serializable {
     private String experience = "";
     private boolean identityValidated;
     private String passwordHash = "";
+    private int passwordPolicyVersion;
 
     public UserProfile(String name) {
         this.name = name;
@@ -81,6 +82,15 @@ public class UserProfile implements Serializable {
 
     public void setPasswordHash(String passwordHash) {
         this.passwordHash = passwordHash;
+        this.passwordPolicyVersion = PasswordPolicy.CURRENT_VERSION;
+    }
+
+    public int getPasswordPolicyVersion() {
+        return passwordPolicyVersion;
+    }
+
+    public boolean requiresPasswordUpgrade() {
+        return hasPassword() && passwordPolicyVersion < PasswordPolicy.CURRENT_VERSION;
     }
 
     public void update(String role, String skills, String location) {

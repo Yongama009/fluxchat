@@ -31,6 +31,7 @@ box:
 ```text
 /registercv First name | Last name | ID number | email | phone | location | role | skills | education | experience | password
 /loginid IDNumber password
+/changepassword oldPassword newStrongPassword
 /register password
 /login password
 /profile Role | skills | location
@@ -68,6 +69,14 @@ profile. Each application stores the applicant's CV summary with the message.
 
 Passwords must be at least 8 characters and include uppercase, lowercase, a
 digit, and a special character.
+
+Existing accounts created before this password rule must update their password
+after login. Until they do, FluxChat blocks job posting, matching, applications,
+profile edits, and other account actions. Use:
+
+```text
+/changepassword oldPassword newStrongPassword
+```
 
 Important identity limitation: FluxChat validates South African ID number
 structure locally, including date and checksum. It cannot prove that a first
@@ -150,6 +159,7 @@ After registration or login succeeds, the main app opens with action tabs:
 - Jobs: post a job, attach a source link, refresh jobs, or show your matches
 - Apply: apply to a job with the saved CV profile or view applications for a job
 - Users: list users, list jobs, show matches, or show help
+- Security: update a legacy or current password
 
 The message box at the bottom still accepts raw commands and normal public
 networking messages.

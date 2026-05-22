@@ -1,6 +1,8 @@
 package server.store;
 
 public final class PasswordPolicy {
+    public static final int CURRENT_VERSION = 2;
+
     private PasswordPolicy() {
     }
 

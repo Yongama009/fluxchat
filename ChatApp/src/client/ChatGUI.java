@@ -58,6 +58,8 @@ public class ChatGUI extends JFrame {
     private final JTextField applyJobIdField = new JTextField();
     private final JTextArea applicationMessageArea = new JTextArea(4, 24);
     private final JTextField applicationsJobIdField = new JTextField();
+    private final JPasswordField currentPasswordField = new JPasswordField();
+    private final JPasswordField newPasswordField = new JPasswordField();
     private final JButton sendButton = new JButton("Send");
 
     private Socket socket;
@@ -160,6 +162,7 @@ public class ChatGUI extends JFrame {
         tabs.addTab("Jobs", buildJobsPanel());
         tabs.addTab("Apply", buildApplyPanel());
         tabs.addTab("Users", buildUsersPanel());
+        tabs.addTab("Security", buildSecurityPanel());
         tabs.setPreferredSize(new Dimension(390, 460));
         return tabs;
     }
@@ -202,6 +205,15 @@ public class ChatGUI extends JFrame {
         buttons.add(button("Help", event -> sendCommand("/help")));
         panel.add(buttons);
         panel.add(hint("Applications include the applicant CV summary automatically."));
+        return panel;
+    }
+
+    private JPanel buildSecurityPanel() {
+        JPanel panel = formPanel();
+        addFormRow(panel, "Current Password", currentPasswordField);
+        addFormRow(panel, "New Password", newPasswordField);
+        panel.add(button("Update Password", event -> changePassword()));
+        panel.add(hint("New password needs 8+ characters with uppercase, lowercase, digit, and special character."));
         return panel;
     }
 
@@ -286,6 +298,9 @@ public class ChatGUI extends JFrame {
             signedIn = true;
             cards.show(root, APP_VIEW);
             sendCommand("/matches");
+        } else if (message.startsWith("PASSWORD_UPGRADE_REQUIRED:")) {
+            signedIn = true;
+            cards.show(root, APP_VIEW);
         } else if (!signedIn && isUsefulAuthMessage(message)) {
             authStatusLabel.setText(message);
         }
@@ -326,6 +341,11 @@ public class ChatGUI extends JFrame {
 
     private void sendApplicationsQuery() {
         sendCommand("/applications " + value(applicationsJobIdField));
+    }
+
+    private void changePassword() {
+        sendCommand("/changepassword " + password(currentPasswordField)
+                + " " + password(newPasswordField));
     }
 
     private void sendCommand(String command) {
