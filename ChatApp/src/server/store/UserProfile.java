@@ -107,6 +107,31 @@ public class UserProfile implements Serializable {
         }
     }
 
+    public void updateProfile(String email, String phone, String location, String role,
+                             String skills, String education, String experience) {
+        if (!email.isBlank()) {
+            this.email = email;
+        }
+        if (!phone.isBlank()) {
+            this.phone = phone;
+        }
+        if (!location.isBlank()) {
+            this.location = location;
+        }
+        if (!role.isBlank()) {
+            this.role = role;
+        }
+        if (!skills.isBlank()) {
+            this.skills = skills;
+        }
+        if (!education.isBlank()) {
+            this.education = education;
+        }
+        if (!experience.isBlank()) {
+            this.experience = experience;
+        }
+    }
+
     public void updateFromProfileText(String profileText) {
         String[] parts = profileText.split("\\|", 3);
 

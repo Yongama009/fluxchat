@@ -1,0 +1,1293 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>FluxChat - Career Network</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --primary: #0066cc;
+      --primary-dark: #0052a3;
+      --primary-light: #e6f0ff;
+      --success: #16a34a;
+      --error: #dc2626;
+      --warning: #ea8c55;
+      --text-dark: #1f2937;
+      --text-light: #6b7280;
+      --bg-light: #f9fafb;
+      --bg-white: #ffffff;
+      --border: #e5e7eb;
+      --shadow: 0 1px 3px rgba(0,0,0,0.1);
+      --shadow-lg: 0 10px 25px rgba(0,0,0,0.1);
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background-color: var(--bg-light);
+      color: var(--text-dark);
+      line-height: 1.6;
+    }
+
+    header {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+      color: white;
+      padding: 24px 0;
+      box-shadow: var(--shadow);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .header-content {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .logo {
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 12px;
+    }
+
+    .logout-btn-header {
+      background: rgba(255,255,255,0.2);
+      border: 1px solid rgba(255,255,255,0.3);
+      color: white;
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.2s;
+    }
+
+    .logout-btn-header:hover {
+      background: rgba(255,255,255,0.3);
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 40px 24px;
+    }
+
+    .main-grid {
+      display: grid;
+      grid-template-columns: 1fr 2fr;
+      gap: 32px;
+      margin-bottom: 40px;
+    }
+
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    .card {
+      background: var(--bg-white);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: var(--shadow);
+      transition: all 0.3s ease;
+    }
+
+    .card:hover {
+      box-shadow: var(--shadow-lg);
+    }
+
+    .card h2 {
+      font-size: 20px;
+      margin-bottom: 16px;
+      color: var(--text-dark);
+      border-bottom: 2px solid var(--primary-light);
+      padding-bottom: 12px;
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    label {
+      display: block;
+      font-size: 14px;
+      font-weight: 500;
+      margin-bottom: 6px;
+      color: var(--text-dark);
+    }
+
+    input[type=text],
+    input[type=password],
+    textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 14px;
+      font-family: inherit;
+      transition: all 0.2s;
+    }
+
+    input[type=text]:focus,
+    input[type=password]:focus,
+    textarea:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px var(--primary-light);
+    }
+
+    button {
+      background: var(--primary);
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: inline-block;
+    }
+
+    button:hover {
+      background: var(--primary-dark);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 102, 204, 0.3);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    .button-group {
+      display: flex;
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .btn-secondary {
+      background: var(--text-light);
+    }
+
+    .btn-secondary:hover {
+      background: var(--text-dark);
+    }
+
+    .btn-danger {
+      background: var(--error);
+    }
+
+    .btn-danger:hover {
+      background: #b91c1c;
+    }
+
+    .apply-btn {
+      width: 100%;
+      margin-top: 12px;
+      background: var(--success);
+    }
+
+    .apply-btn:hover {
+      background: #15803d;
+    }
+
+    .message {
+      margin-top: 12px;
+      padding: 12px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .notice {
+      background: #dcfce7;
+      color: var(--success);
+      border-left: 4px solid var(--success);
+    }
+
+    .error {
+      background: #fee2e2;
+      color: var(--error);
+      border-left: 4px solid var(--error);
+    }
+
+    .jobs-section {
+      grid-column: 1 / -1;
+    }
+
+    .jobs-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+    }
+
+    .jobs-header h2 {
+      margin: 0;
+    }
+
+    .jobs-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 20px;
+    }
+
+    .job-card {
+      background: var(--bg-white);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: var(--shadow);
+      transition: all 0.3s ease;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .job-card:hover {
+      box-shadow: var(--shadow-lg);
+      border-color: var(--primary);
+      transform: translateY(-4px);
+    }
+
+    .job-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text-dark);
+      margin-bottom: 8px;
+    }
+
+    .job-meta {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 12px;
+      font-size: 14px;
+      color: var(--text-light);
+    }
+
+    .job-company {
+      font-weight: 600;
+      color: var(--primary);
+    }
+
+    .job-location {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .job-description {
+      font-size: 14px;
+      color: var(--text-light);
+      margin-bottom: 16px;
+      flex-grow: 1;
+      line-height: 1.5;
+    }
+
+    .job-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: 12px;
+      border-top: 1px solid var(--border);
+    }
+
+    .job-id {
+      font-size: 12px;
+      color: var(--text-light);
+      background: var(--primary-light);
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-weight: 600;
+      color: var(--primary);
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--text-light);
+    }
+
+    .empty-state-icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+    }
+
+    @media (max-width: 768px) {
+      .main-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .jobs-list {
+        grid-template-columns: 1fr;
+      }
+
+      .header-content {
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .logo {
+        font-size: 24px;
+      }
+    }
+
+    .tabs {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 24px;
+      border-bottom: 2px solid var(--border);
+    }
+
+    .tab {
+      padding: 12px 16px;
+      border: none;
+      background: none;
+      color: var(--text-light);
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      border-bottom: 3px solid transparent;
+      margin-bottom: -2px;
+    }
+
+    .tab.active {
+      color: var(--primary);
+      border-bottom-color: var(--primary);
+    }
+
+    .tab:hover {
+      color: var(--text-dark);
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    .section-title {
+      font-size: 24px;
+      font-weight: 700;
+      margin-bottom: 24px;
+      color: var(--text-dark);
+    }
+
+    small {
+      font-size: 12px;
+      color: var(--text-light);
+    }
+
+    /* Dark mode styles */
+    body.dark-mode {
+      --bg-light: #1a1a1a;
+      --bg-white: #2d2d2d;
+      --text-dark: #f0f0f0;
+      --text-light: #b0b0b0;
+      --border: #404040;
+    }
+
+    .theme-toggle {
+      background: transparent;
+      border: none;
+      color: white;
+      font-size: 20px;
+      cursor: pointer;
+      padding: 8px 12px;
+      transition: transform 0.2s;
+    }
+
+    .theme-toggle:hover {
+      transform: scale(1.2);
+    }
+
+    /* Apply modal styles */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0,0,0,0.5);
+    }
+
+    .modal-content {
+      background-color: var(--bg-white);
+      margin: 5% auto;
+      padding: 24px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      width: 90%;
+      max-width: 500px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 12px;
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      color: var(--text-light);
+    }
+
+    .user-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .stat-box {
+      background: var(--primary-light);
+      padding: 12px;
+      border-radius: 8px;
+      text-align: center;
+    }
+
+    .stat-value {
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--primary);
+    }
+
+    .stat-label {
+      font-size: 12px;
+      color: var(--text-light);
+    }
+
+    .profile-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .profile-field {
+      margin-bottom: 12px;
+    }
+
+    .profile-field label {
+      font-size: 12px;
+      color: var(--text-light);
+      text-transform: uppercase;
+      font-weight: 700;
+      margin-bottom: 4px;
+      display: block;
+    }
+
+    .profile-field-value {
+      font-size: 14px;
+      color: var(--text-dark);
+    }
+
+    .match-score {
+      display: inline-block;
+      background: var(--primary);
+      color: white;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="header-content">
+      <div class="logo">✨ FluxChat</div>
+      <div class="header-actions">
+        <button class="theme-toggle" id="themeToggle" title="Toggle dark mode">🌙</button>
+        <button class="logout-btn-header" id="logoutBtnHeader" style="display:none;">Sign Out</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="container">
+    <div class="main-grid">
+
+      <div class="sidebar">
+        <div id="authSection">
+          <div class="card">
+            <h2>Create Account</h2>
+            <form id="registerForm">
+              <div class="form-group">
+                <label>First Name *</label>
+                <input name="firstName" required type="text" placeholder="Alice" />
+              </div>
+              <div class="form-group">
+                <label>Last Name *</label>
+                <input name="lastName" required type="text" placeholder="Mokoena" />
+              </div>
+              <div class="form-group">
+                <label>ID Number *</label>
+                <input name="idNumber" required type="text" placeholder="8001015009087" />
+              </div>
+              <div class="form-group">
+                <label>Email *</label>
+                <input name="email" type="text" placeholder="alice@example.com" />
+              </div>
+              <div class="form-group">
+                <label>Phone *</label>
+                <input name="phone" type="text" placeholder="0712345678" />
+              </div>
+              <div class="form-group">
+                <label>Location *</label>
+                <input name="location" type="text" placeholder="Johannesburg" />
+              </div>
+              <div class="form-group">
+                <label>Role *</label>
+                <input name="role" type="text" placeholder="Junior Java Developer" />
+              </div>
+              <div class="form-group">
+                <label>Skills *</label>
+                <input name="skills" type="text" placeholder="Java, SQL, Swing" />
+              </div>
+              <div class="form-group">
+                <label>Education *</label>
+                <input name="education" type="text" placeholder="Diploma in IT" />
+              </div>
+              <div class="form-group">
+                <label>Experience *</label>
+                <input name="experience" type="text" placeholder="2 years support experience" />
+              </div>
+              <div class="form-group">
+                <label>Password *</label>
+                <input name="password" required type="password" placeholder="Min 8 chars, uppercase, lowercase, digit, special char" />
+              </div>
+              <button type="submit" style="width: 100%;">Sign Up</button>
+              <div id="registerResult" class="message" aria-live="polite"></div>
+            </form>
+          </div>
+
+          <div class="card">
+            <h2>Sign In</h2>
+            <form id="loginForm">
+              <div class="form-group">
+                <label>ID Number *</label>
+                <input name="idNumber" required type="text" placeholder="Your SA ID number" />
+              </div>
+              <div class="form-group">
+                <label>Password *</label>
+                <input name="password" required type="password" placeholder="Your password" />
+              </div>
+              <button type="submit" style="width: 100%;">Sign In</button>
+              <div id="loginResult" class="message" aria-live="polite"></div>
+            </form>
+          </div>
+        </div>
+
+        <div id="userSection" style="display: none;">
+          <div class="card">
+            <h2>Account</h2>
+            <div id="userInfo" style="margin-bottom: 16px; font-size: 14px;"></div>
+            <div class="tabs" style="border-bottom: none; margin: 16px -24px -24px -24px; padding: 0 24px;">
+              <button class="tab active" onclick="switchUserTab('profile')">Profile</button>
+              <button class="tab" onclick="switchUserTab('post-job')">Post Job</button>
+              <button class="tab" onclick="switchUserTab('matches')">My Matches</button>
+            </div>
+          </div>
+
+          <!-- User Profile Tab -->
+           <div id="tab-profile" class="tab-content active" style="display: block;">
+             <div class="card">
+               <h2>My Profile</h2>
+               <div id="profileContent" style="display: none;">
+                 <div class="user-stats">
+                   <div class="stat-box">
+                     <div class="stat-value" id="appliedCount">0</div>
+                     <div class="stat-label">Applications</div>
+                   </div>
+                   <div class="stat-box">
+                     <div class="stat-value" id="matchCount">0</div>
+                     <div class="stat-label">Matches</div>
+                   </div>
+                 </div>
+                 <div id="profileViewMode">
+                   <div class="profile-grid">
+                     <div class="profile-field">
+                       <label>Name</label>
+                       <div class="profile-field-value" id="pName">-</div>
+                     </div>
+                     <div class="profile-field">
+                       <label>Location</label>
+                       <div class="profile-field-value" id="pLocation">-</div>
+                     </div>
+                     <div class="profile-field">
+                       <label>Role</label>
+                       <div class="profile-field-value" id="pRole">-</div>
+                     </div>
+                     <div class="profile-field">
+                       <label>ID Number</label>
+                       <div class="profile-field-value" id="pId">-</div>
+                     </div>
+                     <div class="profile-field">
+                       <label>Email</label>
+                       <div class="profile-field-value" id="pEmail">-</div>
+                     </div>
+                     <div class="profile-field">
+                       <label>Phone</label>
+                       <div class="profile-field-value" id="pPhone">-</div>
+                     </div>
+                     <div class="profile-field" style="grid-column: 1 / -1;">
+                       <label>Skills</label>
+                       <div class="profile-field-value" id="pSkills">-</div>
+                     </div>
+                     <div class="profile-field" style="grid-column: 1 / -1;">
+                       <label>Education</label>
+                       <div class="profile-field-value" id="pEducation">-</div>
+                     </div>
+                     <div class="profile-field" style="grid-column: 1 / -1;">
+                       <label>Experience</label>
+                       <div class="profile-field-value" id="pExperience">-</div>
+                     </div>
+                   </div>
+                   <button id="editProfileBtn" style="width: 100%; margin-top: 16px;">✏️ Edit Profile</button>
+                 </div>
+                 <div id="profileEditMode" style="display: none;">
+                   <form id="editProfileForm">
+                     <div class="form-group">
+                       <label>Email *</label>
+                       <input id="editEmail" name="email" type="text" required />
+                     </div>
+                     <div class="form-group">
+                       <label>Phone *</label>
+                       <input id="editPhone" name="phone" type="text" required />
+                     </div>
+                     <div class="form-group">
+                       <label>Location *</label>
+                       <input id="editLocation" name="location" type="text" required />
+                     </div>
+                     <div class="form-group">
+                       <label>Role *</label>
+                       <input id="editRole" name="role" type="text" required />
+                     </div>
+                     <div class="form-group">
+                       <label>Skills *</label>
+                       <input id="editSkills" name="skills" type="text" required />
+                     </div>
+                     <div class="form-group">
+                       <label>Education *</label>
+                       <input id="editEducation" name="education" type="text" required />
+                     </div>
+                     <div class="form-group">
+                       <label>Experience *</label>
+                       <input id="editExperience" name="experience" type="text" required />
+                     </div>
+                     <div class="button-group">
+                       <button type="submit" style="flex: 1;">Save Changes</button>
+                       <button type="button" id="cancelEditBtn" class="btn-secondary" style="flex: 1;">Cancel</button>
+                     </div>
+                     <div id="editProfileResult" class="message" aria-live="polite"></div>
+                   </form>
+                 </div>
+               </div>
+               <div id="profileLoading" style="text-align: center; padding: 20px;">Loading profile...</div>
+               <div id="profileError" class="message error" style="display: none;"></div>
+             </div>
+           </div>
+
+          <!-- Post Job Tab -->
+          <div id="tab-post-job" class="tab-content" style="display: none;">
+            <div class="card">
+              <h2>Post a Job</h2>
+              <form id="postJobForm">
+                <div class="form-group">
+                  <label>Job Title *</label>
+                  <input name="title" required type="text" placeholder="Senior Python Developer" />
+                </div>
+                <div class="form-group">
+                  <label>Company *</label>
+                  <input name="company" required type="text" placeholder="Your Company Name" />
+                </div>
+                <div class="form-group">
+                  <label>Location *</label>
+                  <input name="location" required type="text" placeholder="Johannesburg, Remote, etc." />
+                </div>
+                <div class="form-group">
+                  <label>Description *</label>
+                  <textarea name="description" required placeholder="Job description, requirements, responsibilities..." rows="5"></textarea>
+                </div>
+                <div class="form-group">
+                  <label>Source URL (optional)</label>
+                  <input name="sourceUrl" type="text" placeholder="https://..." />
+                </div>
+                <button type="submit" style="width: 100%;">Post Job</button>
+                <div id="postJobResult" class="message" aria-live="polite"></div>
+              </form>
+            </div>
+          </div>
+
+          <!-- My Matches Tab -->
+          <div id="tab-matches" class="tab-content" style="display: none;">
+            <div class="card">
+              <h2>Matched Opportunities</h2>
+              <div id="matchesLoading" style="text-align: center; padding: 20px;">Loading matches...</div>
+              <div id="matchesList" style="display: none;">
+                <div id="matchesContent" class="jobs-list"></div>
+              </div>
+              <div id="matchesEmpty" style="display: none; text-align: center; padding: 40px 20px; color: var(--text-light);">
+                <div style="font-size: 48px; margin-bottom: 16px;">✨</div>
+                <p>No matches yet. Check back soon!</p>
+              </div>
+              <div id="matchesError" class="message error" style="display: none;"></div>
+            </div>
+          </div>
+
+          <button id="logoutBtn" class="btn-danger" style="width: 100%; margin-top: 16px;">Sign Out</button>
+        </div>
+      </div>
+
+      <div class="jobs-section">
+        <div class="jobs-header">
+          <h2 class="section-title">Available Opportunities</h2>
+          <button id="refreshJobs">↻ Refresh</button>
+        </div>
+        <div id="jobs" aria-live="polite"></div>
+        <div id="jobsError" class="message error" style="display: none;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Apply Modal -->
+  <div id="applyModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 style="margin: 0;">Apply for Job</h2>
+        <button class="modal-close" onclick="closeApplyModal()">&times;</button>
+      </div>
+      <form id="applyForm">
+        <div class="form-group">
+          <label>Job Title</label>
+          <input id="applyJobTitle" type="text" readonly style="background: var(--bg-light);" />
+        </div>
+        <div class="form-group">
+          <label>Your Message *</label>
+          <textarea id="applyMessage" name="message" required placeholder="Tell the employer why you're a great fit..." rows="4"></textarea>
+        </div>
+        <div class="button-group">
+          <button type="submit" style="flex: 1;">Submit Application</button>
+          <button type="button" onclick="closeApplyModal()" class="btn-secondary" style="flex: 1;">Cancel</button>
+        </div>
+        <div id="applyResult" class="message" aria-live="polite"></div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    const apiBase = '/api';
+    let currentJobIdForApply = null;
+
+    // Dark mode toggle
+    document.getElementById('themeToggle').addEventListener('click', () => {
+      document.body.classList.toggle('dark-mode');
+      localStorage.setItem('fluxchat-dark-mode', document.body.classList.contains('dark-mode'));
+    });
+
+    // Load dark mode preference
+    if (localStorage.getItem('fluxchat-dark-mode') === 'true') {
+      document.body.classList.add('dark-mode');
+    }
+
+    // Helper functions
+    function setMessage(el, msg, isError = false) {
+      el.textContent = msg;
+      el.className = 'message ' + (isError ? 'error' : 'notice');
+      el.style.display = 'block';
+    }
+
+    function getAuthHeaders() {
+      const token = localStorage.getItem('fluxchat_token');
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = 'Bearer ' + token;
+      return headers;
+    }
+
+    function isLoggedIn() {
+      return !!localStorage.getItem('fluxchat_token');
+    }
+
+    function updateUI() {
+      const authSection = document.getElementById('authSection');
+      const userSection = document.getElementById('userSection');
+      const logoutBtnHeader = document.getElementById('logoutBtnHeader');
+      const token = localStorage.getItem('fluxchat_token');
+
+      if (token) {
+        authSection.style.display = 'none';
+        userSection.style.display = 'block';
+        logoutBtnHeader.style.display = 'inline-block';
+        document.getElementById('userInfo').innerHTML = '<strong>👤 Signed in as:</strong><br>' + escapeHtml(token);
+        loadProfile();
+      } else {
+        authSection.style.display = 'block';
+        userSection.style.display = 'none';
+        logoutBtnHeader.style.display = 'none';
+      }
+    }
+
+    // Register form
+    document.getElementById('registerForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const f = e.currentTarget;
+      const data = {
+        firstName: f.firstName.value.trim(),
+        lastName: f.lastName.value.trim(),
+        idNumber: f.idNumber.value.trim(),
+        email: f.email.value.trim(),
+        phone: f.phone.value.trim(),
+        location: f.location.value.trim(),
+        role: f.role.value.trim(),
+        skills: f.skills.value.trim(),
+        education: f.education.value.trim(),
+        experience: f.experience.value.trim(),
+        password: f.password.value
+      };
+
+      const resultEl = document.getElementById('registerResult');
+      setMessage(resultEl, 'Creating account...');
+      try {
+        const res = await fetch(apiBase + '/registercv', {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: JSON.stringify(data)
+        });
+        const body = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          setMessage(resultEl, body.error || ('Failed: ' + res.status), true);
+          return;
+        }
+        if (body.token) {
+          localStorage.setItem('fluxchat_token', body.token);
+          setMessage(resultEl, '✓ Account created successfully!');
+          updateUI();
+          loadJobs();
+          f.reset();
+        }
+      } catch (err) {
+        setMessage(resultEl, 'Network error: ' + err.message, true);
+      }
+    });
+
+    // Login form
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const f = e.currentTarget;
+      const data = { idNumber: f.idNumber.value.trim(), password: f.password.value };
+      const resultEl = document.getElementById('loginResult');
+      setMessage(resultEl, 'Signing in...');
+      try {
+        const res = await fetch(apiBase + '/login', {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: JSON.stringify(data)
+        });
+        const body = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          setMessage(resultEl, body.error || ('Login failed: ' + res.status), true);
+          return;
+        }
+        if (body.token) {
+          localStorage.setItem('fluxchat_token', body.token);
+          setMessage(resultEl, '✓ Signed in successfully!');
+          updateUI();
+          loadJobs();
+          f.reset();
+        }
+      } catch (err) {
+        setMessage(resultEl, 'Network error: ' + err.message, true);
+      }
+    });
+
+    // Logout buttons
+    document.getElementById('logoutBtn').addEventListener('click', () => {
+      localStorage.removeItem('fluxchat_token');
+      updateUI();
+      loadJobs();
+      document.getElementById('loginResult').innerHTML = '';
+      document.getElementById('registerResult').innerHTML = '';
+    });
+
+    document.getElementById('logoutBtnHeader').addEventListener('click', () => {
+      localStorage.removeItem('fluxchat_token');
+      updateUI();
+      loadJobs();
+    });
+
+    // Refresh jobs
+    document.getElementById('refreshJobs').addEventListener('click', () => {
+      loadJobs();
+    });
+
+    // Load jobs on startup and after auth changes
+    async function loadJobs() {
+      const jobsEl = document.getElementById('jobs');
+      const jobsErr = document.getElementById('jobsError');
+      jobsEl.innerHTML = '<div class="empty-state"><div class="empty-state-icon">⏳</div><p>Loading opportunities...</p></div>';
+      jobsErr.style.display = 'none';
+      try {
+        const res = await fetch(apiBase + '/jobs', { headers: getAuthHeaders() });
+        const body = await res.json().catch(() => null);
+        if (!res.ok) {
+          jobsEl.innerHTML = '';
+          jobsErr.textContent = (body && body.error) ? body.error : ('Failed to load: ' + res.status);
+          jobsErr.style.display = 'block';
+          return;
+        }
+        if (!Array.isArray(body)) {
+          if (body && Array.isArray(body.jobs)) {
+            renderJobs(body.jobs);
+          } else {
+            jobsEl.innerHTML = '<div class="error">Unexpected response format</div>';
+          }
+          return;
+        }
+        renderJobs(body);
+      } catch (err) {
+        jobsEl.innerHTML = '';
+        jobsErr.textContent = 'Network error: ' + err.message;
+        jobsErr.style.display = 'block';
+      }
+    }
+
+    function renderJobs(list) {
+      const jobsEl = document.getElementById('jobs');
+      if (!list || list.length === 0) {
+        jobsEl.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📭</div><p>No opportunities posted yet</p></div>';
+        return;
+      }
+      jobsEl.innerHTML = '';
+      const jobsList = document.createElement('div');
+      jobsList.className = 'jobs-list';
+      for (const j of list) {
+        const card = document.createElement('div');
+        card.className = 'job-card';
+        const title = j.title || 'Untitled';
+        const id = j.id || '';
+        const company = j.company || 'Unknown Company';
+        const location = j.location || 'Location TBA';
+        const desc = j.description || 'No description';
+        const poster = j.poster || 'Anonymous';
+        const isLoggedIn = !!localStorage.getItem('fluxchat_token');
+
+        card.innerHTML = `
+          <div class="job-title">${escapeHtml(title)}</div>
+          <div class="job-meta">
+            <div class="job-company">@ ${escapeHtml(company)}</div>
+            <div class="job-location">📍 ${escapeHtml(location)}</div>
+          </div>
+          <div class="job-description">${escapeHtml(desc)}</div>
+          <div class="job-footer">
+            <div class="job-id">#${escapeHtml(String(id))}</div>
+            <small style="color: var(--text-light);">by ${escapeHtml(poster)}</small>
+          </div>
+          ${isLoggedIn ? `<button class="apply-btn" onclick="openApplyModal(${id}, '${title.replace(/'/g, "\\'")}')">Apply Now</button>` : ''}
+        `;
+        jobsList.appendChild(card);
+      }
+      jobsEl.appendChild(jobsList);
+    }
+
+    // Apply modal functions
+    function openApplyModal(jobId, jobTitle) {
+      currentJobIdForApply = jobId;
+      document.getElementById('applyJobTitle').value = jobTitle;
+      document.getElementById('applyMessage').value = '';
+      document.getElementById('applyResult').outerHTML = '<div id="applyResult" class="message" aria-live="polite"></div>';
+      document.getElementById('applyModal').style.display = 'block';
+    }
+
+    function closeApplyModal() {
+      document.getElementById('applyModal').style.display = 'none';
+      currentJobIdForApply = null;
+    }
+
+    window.onclick = function(event) {
+      const modal = document.getElementById('applyModal');
+      if (event.target === modal) {
+        modal.style.display = 'none';
+      }
+    };
+
+    // Tab switching
+    function switchUserTab(tab) {
+      document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
+      document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+      document.getElementById('tab-' + tab).style.display = 'block';
+      event.target.classList.add('active');
+
+      if (tab === 'profile') loadProfile();
+      if (tab === 'matches') loadMatches();
+    }
+
+    // Load user profile
+    async function loadProfile() {
+      const token = localStorage.getItem('fluxchat_token');
+      const profileContent = document.getElementById('profileContent');
+      const profileLoading = document.getElementById('profileLoading');
+      const profileError = document.getElementById('profileError');
+
+      profileContent.style.display = 'none';
+      profileLoading.style.display = 'block';
+      profileError.style.display = 'none';
+
+      try {
+        const res = await fetch(`${apiBase}/profile?token=${encodeURIComponent(token)}`);
+        const data = await res.json();
+        if (!res.ok) {
+          profileError.textContent = data.error || 'Failed to load profile';
+          profileError.style.display = 'block';
+          return;
+        }
+        document.getElementById('pName').textContent = data.name || '-';
+        document.getElementById('pRole').textContent = data.role || '-';
+        document.getElementById('pLocation').textContent = data.location || '-';
+        document.getElementById('pSkills').textContent = data.skills || '-';
+        document.getElementById('pEducation').textContent = data.education || '-';
+        document.getElementById('pExperience').textContent = data.experience || '-';
+        document.getElementById('pEmail').textContent = data.email || '-';
+        document.getElementById('pPhone').textContent = data.phone || '-';
+        document.getElementById('pId').textContent = data.idNumber ? data.idNumber.substring(0,6) + '****' : '-';
+
+        // Store profile data for edit form
+        window.currentProfile = data;
+
+        profileLoading.style.display = 'none';
+        profileContent.style.display = 'block';
+      } catch (err) {
+        profileError.textContent = 'Network error: ' + err.message;
+        profileError.style.display = 'block';
+      }
+    }
+
+    // Edit profile functionality
+    document.getElementById('editProfileBtn').addEventListener('click', () => {
+      const token = localStorage.getItem('fluxchat_token');
+      const profile = window.currentProfile;
+      if (profile) {
+        document.getElementById('editEmail').value = profile.email || '';
+        document.getElementById('editPhone').value = profile.phone || '';
+        document.getElementById('editLocation').value = profile.location || '';
+        document.getElementById('editRole').value = profile.role || '';
+        document.getElementById('editSkills').value = profile.skills || '';
+        document.getElementById('editEducation').value = profile.education || '';
+        document.getElementById('editExperience').value = profile.experience || '';
+      }
+      document.getElementById('profileViewMode').style.display = 'none';
+      document.getElementById('profileEditMode').style.display = 'block';
+    });
+
+    document.getElementById('cancelEditBtn').addEventListener('click', () => {
+      document.getElementById('profileViewMode').style.display = 'block';
+      document.getElementById('profileEditMode').style.display = 'none';
+      document.getElementById('editProfileForm').reset();
+    });
+
+    document.getElementById('editProfileForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const token = localStorage.getItem('fluxchat_token');
+      const f = e.currentTarget;
+      const data = {
+        token: token,
+        email: f.email.value.trim(),
+        phone: f.phone.value.trim(),
+        location: f.location.value.trim(),
+        role: f.role.value.trim(),
+        skills: f.skills.value.trim(),
+        education: f.education.value.trim(),
+        experience: f.experience.value.trim()
+      };
+      const resultEl = document.getElementById('editProfileResult');
+      setMessage(resultEl, 'Updating profile...');
+      try {
+        const res = await fetch(apiBase + '/updateprofile', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+        const body = await res.json();
+        if (!res.ok) {
+          setMessage(resultEl, body.error || 'Failed to update profile', true);
+          return;
+        }
+        setMessage(resultEl, '✓ Profile updated successfully!');
+        setTimeout(() => {
+          loadProfile();
+          document.getElementById('profileViewMode').style.display = 'block';
+          document.getElementById('profileEditMode').style.display = 'none';
+          document.getElementById('editProfileResult').innerHTML = '';
+        }, 1500);
+      } catch (err) {
+        setMessage(resultEl, 'Network error: ' + err.message, true);
+      }
+    });
+
+    // Load matched jobs
+    async function loadMatches() {
+      const token = localStorage.getItem('fluxchat_token');
+      const matchesLoading = document.getElementById('matchesLoading');
+      const matchesList = document.getElementById('matchesList');
+      const matchesEmpty = document.getElementById('matchesEmpty');
+      const matchesContent = document.getElementById('matchesContent');
+      const matchesError = document.getElementById('matchesError');
+
+      matchesLoading.style.display = 'block';
+      matchesList.style.display = 'none';
+      matchesEmpty.style.display = 'none';
+      matchesError.style.display = 'none';
+
+      try {
+        const res = await fetch(`${apiBase}/matches?token=${encodeURIComponent(token)}`);
+        const data = await res.json();
+        if (!res.ok) {
+          matchesError.textContent = data.error || 'Failed to load matches';
+          matchesError.style.display = 'block';
+          matchesLoading.style.display = 'none';
+          return;
+        }
+        const matches = data.matches || [];
+        document.getElementById('matchCount').textContent = matches.length;
+        if (matches.length === 0) {
+          matchesEmpty.style.display = 'block';
+          matchesLoading.style.display = 'none';
+          return;
+        }
+        matchesContent.innerHTML = '';
+        for (const m of matches) {
+          const div = document.createElement('div');
+          div.className = 'job-card';
+          div.innerHTML = `
+            <div class="job-title">${escapeHtml(m.title)}</div>
+            <div class="job-meta">
+              <div class="job-company">@ ${escapeHtml(m.company)}</div>
+              <div class="job-location">📍 ${escapeHtml(m.location)}</div>
+            </div>
+            <div class="match-score">Match Score: ${m.score} • ${escapeHtml(m.reason)}</div>
+            <div class="job-description" style="margin-top: 12px;">${escapeHtml(m.description)}</div>
+            <button style="width: 100%; margin-top: 12px;" onclick="openApplyModal(${m.id}, '${m.title.replace(/'/g, "\\'")}')">Apply</button>
+          `;
+          matchesContent.appendChild(div);
+        }
+        matchesLoading.style.display = 'none';
+        matchesList.style.display = 'block';
+      } catch (err) {
+        matchesError.textContent = 'Network error: ' + err.message;
+        matchesError.style.display = 'block';
+        matchesLoading.style.display = 'none';
+      }
+    }
+
+    // Post job form
+    document.getElementById('postJobForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const token = localStorage.getItem('fluxchat_token');
+      const f = e.currentTarget;
+      const data = {
+        token: token,
+        title: f.title.value.trim(),
+        company: f.company.value.trim(),
+        location: f.location.value.trim(),
+        description: f.description.value.trim(),
+        sourceUrl: f.sourceUrl.value.trim()
+      };
+      const resultEl = document.getElementById('postJobResult');
+      setMessage(resultEl, 'Posting job...');
+      try {
+        const res = await fetch(apiBase + '/post', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+        const body = await res.json();
+        if (!res.ok) {
+          setMessage(resultEl, body.error || 'Failed to post job', true);
+          return;
+        }
+        setMessage(resultEl, '✓ Job posted successfully! ID: ' + body.id);
+        f.reset();
+        loadJobs();
+      } catch (err) {
+        setMessage(resultEl, 'Network error: ' + err.message, true);
+      }
+    });
+
+    // Apply form
+    document.getElementById('applyForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const token = localStorage.getItem('fluxchat_token');
+      const message = document.getElementById('applyMessage').value.trim();
+      const data = {
+        token: token,
+        jobId: currentJobIdForApply,
+        message: message
+      };
+      const resultEl = document.getElementById('applyResult');
+      setMessage(resultEl, 'Submitting application...');
+      try {
+        const res = await fetch(apiBase + '/apply', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+        const body = await res.json();
+        if (!res.ok) {
+          setMessage(resultEl, body.error || 'Failed to apply', true);
+          return;
+        }
+        setMessage(resultEl, '✓ Application submitted successfully!');
+        setTimeout(() => {
+          closeApplyModal();
+          loadJobs();
+          if (document.getElementById('tab-matches').style.display !== 'none') {
+            loadMatches();
+          }
+        }, 1500);
+      } catch (err) {
+        setMessage(resultEl, 'Network error: ' + err.message, true);
+      }
+    });
+
+
+    function escapeHtml(s) {
+      if(!s) return '';
+      return String(s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    // Initialize
+    updateUI();
+    loadJobs();
+  </script>
+</body>
+</html>
+
